@@ -1,0 +1,8 @@
+# Ignore everything in the local directory
+/local/**
+!/local/.GITDIRECTORY
+
+# Ignore generated files
+/bin/*
+!.GITDIRECTORY
+

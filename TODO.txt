@@ -1,0 +1,12 @@
+- Read song from a (text?) file
+- Real ADS(R) with START_NOTE and STOP_NOTE
+- Do more than notes in a pattern:
+	- Per-Note instrument!!!
+	- Filter
+	- Bendup/bend down
+	- or tie Notes
+	- Adjust modulation?
+- Look a little at the C64 tracker or my C64 VST for more ideas
+
+
+- Write an editor?
