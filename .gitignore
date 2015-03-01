@@ -4,5 +4,5 @@
 
 # Ignore generated files
 /bin/*
+/obj/*
 !.GITDIRECTORY
-
