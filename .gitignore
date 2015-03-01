@@ -5,5 +5,3 @@
 # Ignore generated files
 /bin/*
 !.GITDIRECTORY
-SDL2.dll
-main.exe
