@@ -4,13 +4,13 @@
 
 # Targets (.c files have to exist)
 
-OBJS = main tables audioio voices
+#OBJS = main tables audioio voices
 #OBJS = test signal array audioio
-
+OBJS = main
 
 # Libraries
 
-LIBS := mingw32 SDLmain SDL
+LIBS := mingw32 SDL2main SDL2
 
 
 # Machine dep. options
@@ -20,7 +20,7 @@ GCC_MACHINEFLAGS=
 # C flags
 CFLAGS=-g -std=c99 -Wall -I./include
 
-CPPFLAGS=
+CPPFLAGS=-g -std=gnu++11 -Wall -I./include
 CXXFLAGS=$(CPPFLAGS)
 
 LDFLAGS=-L./lib
@@ -42,19 +42,19 @@ OBJFILES := $(patsubst %,obj/%.o,$(OBJS))
 
 default: main
 
-obj/%.o: src/%.c
-	gcc $(GCC_MACHINEFLAGS) $(CFLAGS) -c -o $@ $<
+obj/%.o: src/%.cpp
+	g++ $(GCC_MACHINEFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 test:
-	echo CFLAGS=\"$(CFLAGS)\"
+	@echo CFLAGS=\"$(CFLAGS)\"
+	@echo CPPFLAGS=\"$(CPPFLAGS)\"
 
-obj/main.o: src/main.c src/song.c
-		gcc $(GCC_MACHINEFLAGS) $(CFLAGS) -c -o $@ $<
-
+#obj/main.o: src/main.c src/song.c
+#		gcc $(GCC_MACHINEFLAGS) $(CFLAGS) -c -o $@ $<
 
 main: $(OBJFILES)
 #	echo LINKING: $^
-	gcc $(GCC_MACHINEFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBFLAGS)
+	g++ $(GCC_MACHINEFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBFLAGS)
 
 runmain: main
 	./main
