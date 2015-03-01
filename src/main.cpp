@@ -239,6 +239,7 @@ class MyAudioRenderer : public AudioRenderer {
 
 int main(int argc, char *argv[])
 {
+    // Output buffering is for pussies.
     setvbuf(stdout, NULL, _IONBF, 0);
 
     std::cout << "Welcome." << std::endl;
