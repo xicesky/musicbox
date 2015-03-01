@@ -18,9 +18,9 @@ GCC_MACHINEFLAGS=
 
 
 # C flags
-CFLAGS=-g -std=c99 -Wall -I./include
+CFLAGS=-g -std=c99 -Wall -static-libgcc -I./include
 
-CPPFLAGS=-g -std=gnu++11 -Wall -I./include
+CPPFLAGS=-g -std=gnu++11 -static-libgcc -static-libstdc++ -Wall -I./include
 CXXFLAGS=$(CPPFLAGS)
 
 LDFLAGS=-L./lib
@@ -54,7 +54,7 @@ test:
 
 main: $(OBJFILES)
 #	echo LINKING: $^
-	g++ $(GCC_MACHINEFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBFLAGS)
+	g++ $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^ $(LIBFLAGS)
 
 runmain: main
 	./main
