@@ -4,7 +4,6 @@
 
 # Ignore generated files
 /bin/*
-/obj/*
 !.GITDIRECTORY
 SDL2.dll
 main.exe
