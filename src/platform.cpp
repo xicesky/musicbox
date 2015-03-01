@@ -176,6 +176,23 @@ void VideoBuffer::clear() {
     memset(raw, 0, length * sizeof(PIXEL));
 }
 
+void VideoBuffer::clear(PIXEL color) {
+    // Pointer magic ftw
+    char *dest = (char*) raw;
+    char *end = dest + length * sizeof(PIXEL);
+    for (; dest != end; dest += sizeof(PIXEL))
+        memcpy(dest, &color, sizeof(PIXEL));
+}
+
+void VideoBuffer::set(int x, int y, PIXEL color) {
+    if (x < 0) return;
+    if (x >= width) return;
+    if (y < 0) return;
+    if (y >= height) return;
+
+    raw[y * 640 + x] = 0;    
+}
+
 /***************************************************************************************************
     Video renderer
 ***************************************************************************************************/
@@ -189,55 +206,39 @@ void VideoRenderer::render(VideoBuffer& buf) {
 }
 
 /***************************************************************************************************
-    Private fields
+    Video IO
 ***************************************************************************************************/
-/* We don't want this stuff to show up in the header, so we put it in a private class here */
 
-class Platform_Private {
+class AllocatedVideoBuffer : public VideoBuffer
+{
 public:
+    AllocatedVideoBuffer(int w, int h)
+        : VideoBuffer(nullptr, w, h)
+    {
+        raw = new PIXEL[length];
+    }
 
+    virtual ~AllocatedVideoBuffer() {
+        delete raw;
+    }
+
+};
+
+class SDLVideoIO
+{
+public:
     SDL_Window *window = nullptr;
     SDL_Renderer *renderer = nullptr;
     SDL_Texture *texture = nullptr;
-    SDLAudioIO *audio_io = nullptr;
 
-    // TODO
-    //Uint32 * pixels = new Uint32[640 * 480];
+    VideoBuffer *video_buffer = nullptr;
+    VideoRenderer *video_renderer = nullptr;
 
-    bool running;
-    Uint32* pixels;
+    SDLVideoIO()
+    {
+        video_buffer = new AllocatedVideoBuffer(640, 480);
+        video_buffer->clear(0xFFFF0000);
 
-    Platform_Private() {
-        pixels = new Uint32[640 * 480];
-        memset(pixels, 255, 640 * 480 * sizeof(Uint32)); 
-    }
-
-    virtual ~Platform_Private() {
-        delete pixels;
-    }
-
-    void init_everything() {
-        init_window();
-        init_renderer();
-        init_texture();
-        init_audio();
-    }
-
-    void cleanup_everything() {
-        if (audio_io) {
-            delete audio_io;
-            audio_io = nullptr;
-        }
-        sdlcleanup(texture);
-        sdlcleanup(renderer);
-        sdlcleanup(window);
-    }
-
-    void init_window() {
-
-        if (window)
-            return;
-        
         // http://wiki.libsdl.org/SDL_CreateWindow
         window = SDL_CreateWindow(
             "Musicbox",
@@ -248,24 +249,11 @@ public:
 
         if (window == nullptr)
             throw sdl_error("SDL_CreateWindow");
-    }
-
-    void init_renderer() {
-
-        if (renderer)
-            return;
 
         // http://wiki.libsdl.org/SDL_CreateRenderer
         renderer = SDL_CreateRenderer(window, -1, 0);
-
         if (renderer == nullptr)
             throw sdl_error("SDL_CreateRenderer");
-    }
-
-    void init_texture() {
-
-        if (texture)
-            return;
 
         // http://wiki.libsdl.org/SDL_CreateTexture
         texture = SDL_CreateTexture(
@@ -279,26 +267,81 @@ public:
             throw sdl_error("SDL_CreateTexture");
     }
 
+    virtual ~SDLVideoIO()
+    {
+        sdlcleanup(texture);
+        sdlcleanup(renderer);
+        sdlcleanup(window);
+
+        if (video_buffer)
+            delete video_buffer;
+    }
+
+    void render_frame() {
+        if (video_renderer)
+            video_renderer->render(*video_buffer);
+
+        // http://wiki.libsdl.org/SDL_UpdateTexture
+        SDL_UpdateTexture(texture, NULL, video_buffer->raw, 640 * sizeof(PIXEL));
+
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, texture, NULL, NULL);
+        SDL_RenderPresent(renderer);    
+        // SDL_Delay(10);  // Bremse rein... why?
+    }
+
+};
+
+/***************************************************************************************************
+    Private fields
+***************************************************************************************************/
+/* We don't want this stuff to show up in the header, so we put it in a private class here */
+
+class Platform_Private {
+public:
+
+    SDLAudioIO *audio_io = nullptr;
+    SDLVideoIO *video_io = nullptr;
+
+    bool running;
+
+    Platform_Private() {
+    }
+
+    virtual ~Platform_Private() {
+    }
+
+    void init_everything() {
+        init_audio();
+        init_video();
+    }
+
+    void cleanup_everything() {
+        if (audio_io) {
+            delete audio_io;
+            audio_io = nullptr;
+        }
+        if (video_io) {
+            delete video_io;
+            video_io = nullptr;
+        }
+    }
+
     void init_audio() {
         if (audio_io)
             return;
         audio_io = new SDLAudioIO();
     }
 
-    void render_pixels() {
-
+    void init_video() {
+        if (video_io)
+            return;
+        video_io = new SDLVideoIO();
     }
 
     void render_frame() {
-        render_pixels();
-
-        // http://wiki.libsdl.org/SDL_UpdateTexture
-        SDL_UpdateTexture(texture, NULL, pixels, 640 * sizeof(Uint32));
-
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, texture, NULL, NULL);
-        SDL_RenderPresent(renderer);    
-        // SDL_Delay(10);  // Bremse rein... why?
+        if (video_io)
+            video_io->render_frame();
     }
 
     bool mdown = false;
@@ -332,19 +375,19 @@ public:
             if (mdown) {
                 int x = event.motion.x;
                 int y = event.motion.y;
-
-                // Sanity pls.
-                if (x < 0) break;
-                if (x >= 640) break;
-                if (y < 0) break;
-                if (y >= 480) break;
-
                 // std::cout << "    mouse: " << x << " " << y << std::endl;
-                pixels[y * 640 + x] = 0;
+                video_io->video_buffer->set(x, y, 0xFF000000);
             }
             break;
         }
 
+    }
+
+    void handle_mouse(int x, int y, bool isLeftDown) {
+        if (isLeftDown) {
+            if (video_io)
+                video_io->video_buffer->set(x, y, 0xFF000000);
+        }
     }
 };
 
@@ -365,15 +408,6 @@ Platform::~Platform() {
     delete p;
 }
 
-void Platform::run() {
-    p->running = true;
-
-    while (p->running) {
-        p->handle_events();
-        p->render_frame();
-    }
-}
-
 int Platform::getAudioSamplerate() {
     if (!p->audio_io)
         throw SDLException("Audio not initialized.");
@@ -384,6 +418,21 @@ void Platform::setAudioRenderer(AudioRenderer& renderer) {
     if (!p->audio_io)
         throw SDLException("Audio not initialized.");
     p->audio_io->audio_renderer = &renderer;
+}
+
+void Platform::setVideoRenderer(VideoRenderer& renderer) {
+    if (!p->video_io)
+        throw SDLException("Video not initialized.");
+    p->video_io->video_renderer = &renderer;
+}
+
+void Platform::run() {
+    p->running = true;
+
+    while (p->running) {
+        p->handle_events();
+        p->render_frame();
+    }
 }
 
 }

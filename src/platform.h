@@ -56,6 +56,8 @@ public:
     virtual ~VideoBuffer();
 
     void clear();
+    void clear(PIXEL color);
+    void set(int x, int y, PIXEL color);
 };
 
 /***************************************************************************************************/
