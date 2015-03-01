@@ -43,6 +43,90 @@ SDLException sdl_error(const std::string &fname) {
 }
 
 /***************************************************************************************************
+    SDL Audio shit
+***************************************************************************************************/
+
+// Have to declare callback ahead ...
+void platform_audiocallback(void*  userdata, Uint8* stream, int len);
+
+void AudioBuffer::clear() {
+    memset(raw, 0, length * sizeof(SAMPLE));
+}
+
+// Default impl
+void AudioRenderer::render(AudioBuffer& buf) {
+    buf.clear();
+}
+
+class SDLAudioIO {
+
+public:
+    SDL_AudioDeviceID audio_device;
+    AudioBuffer audio_buffer;
+    AudioRenderer *audio_renderer = nullptr;
+
+    int sample_rate = -1;
+    int channels = 2;
+
+    SDLAudioIO() {
+        SDL_AudioSpec want, have;
+        SDL_zero(want);
+
+        want.freq = 48000;
+        want.format = AUDIO_S16;
+        want.channels = 2;
+        want.samples = 512;
+        want.callback = &platform_audiocallback;
+        want.userdata = this;
+
+        audio_device = SDL_OpenAudioDevice(
+            nullptr,    // Default device
+            0,          // No capture (unsupported in SDL2 atm)
+            &want,
+            &have,
+            0
+            );
+
+        if (audio_device == 0)
+            throw sdl_error("SDL_OpenAudioDevice");
+
+        if (have.format != AUDIO_S16)
+            throw SDLException("Invalid audio format.");
+        if (have.channels != 2)
+            throw SDLException("Could not get stereo output.");
+
+        sample_rate = have.freq;
+        channels = have.channels;
+
+        SDL_PauseAudioDevice(audio_device, 0);
+    }
+
+    virtual ~SDLAudioIO() {
+        if (audio_device > 0)
+            SDL_CloseAudioDevice(audio_device);
+    }
+
+    void audio_callback(Uint8* stream, int len) {
+        audio_buffer.raw = (SAMPLE*)stream;
+        audio_buffer.length = len / sizeof(SAMPLE) / channels;
+        if (audio_renderer)
+            audio_renderer->render(audio_buffer);
+        else
+            audio_buffer.clear();
+    }
+
+};
+
+// C callback for SDL
+void platform_audiocallback(void*  userdata, Uint8* stream, int len)
+{
+    if (userdata == nullptr)
+        return;
+    SDLAudioIO* p = (SDLAudioIO*)userdata;
+    p->audio_callback(stream, len);
+}
+
+/***************************************************************************************************
     Private fields
 ***************************************************************************************************/
 /* We don't want this stuff to show up in the header, so we put it in a private class here */
@@ -53,6 +137,7 @@ public:
     SDL_Window *window = nullptr;
     SDL_Renderer *renderer = nullptr;
     SDL_Texture *texture = nullptr;
+    SDLAudioIO *audio_io = nullptr;
 
     // TODO
     //Uint32 * pixels = new Uint32[640 * 480];
@@ -73,9 +158,14 @@ public:
         init_window();
         init_renderer();
         init_texture();
+        init_audio();
     }
 
     void cleanup_everything() {
+        if (audio_io) {
+            delete audio_io;
+            audio_io = nullptr;
+        }
         sdlcleanup(texture);
         sdlcleanup(renderer);
         sdlcleanup(window);
@@ -125,6 +215,12 @@ public:
 
         if (texture == nullptr)
             throw sdl_error("SDL_CreateTexture");
+    }
+
+    void init_audio() {
+        if (audio_io)
+            return;
+        audio_io = new SDLAudioIO();
     }
 
     void render_pixels() {
@@ -181,7 +277,7 @@ public:
                 if (y < 0) break;
                 if (y >= 480) break;
 
-                std::cout << "    mouse: " << x << " " << y << std::endl;
+                // std::cout << "    mouse: " << x << " " << y << std::endl;
                 pixels[y * 640 + x] = 0;
             }
             break;
@@ -198,6 +294,7 @@ Platform::Platform() {
     if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
         throw sdl_error("SDL_Init");
     p = new Platform_Private();
+    p->init_everything();
 }
 
 Platform::~Platform() {
@@ -207,15 +304,24 @@ Platform::~Platform() {
 }
 
 void Platform::run() {
-    p->init_everything();
     p->running = true;
 
     while (p->running) {
         p->handle_events();
         p->render_frame();
     }
+}
 
-    p->cleanup_everything();
+int Platform::getAudioSamplerate() {
+    if (!p->audio_io)
+        throw SDLException("Audio not initialized.");
+    return p->audio_io->sample_rate;
+}
+
+void Platform::setAudioRenderer(AudioRenderer& renderer) {
+    if (!p->audio_io)
+        throw SDLException("Audio not initialized.");
+    p->audio_io->audio_renderer = &renderer;
 }
 
 }
