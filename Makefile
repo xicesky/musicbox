@@ -6,7 +6,7 @@
 
 #OBJS = main tables audioio voices
 #OBJS = test signal array audioio
-OBJS = main
+OBJS = main platform
 
 # Libraries
 

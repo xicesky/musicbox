@@ -1,6 +1,7 @@
 /***************************************************************************************************
     A nice little helper, thanks to:
-    http://www.willusher.io/sdl2%20tutorials/2014/08/01/postscript-1-easy-cleanup/
+        http://www.willusher.io/sdl2%20tutorials/2014/08/01/postscript-1-easy-cleanup/
+    Modified for my pleasure.
 ***************************************************************************************************/
 
 #ifndef SDLCLEANUP_H
@@ -14,7 +15,7 @@
  * the first one in the list each iteration.
  */
 template<typename T, typename... Args>
-void sdlcleanup(T *t, Args&&... args){
+void sdlcleanup(T *&t, Args&&... args){
     //Cleanup the first item in the list
     sdlcleanup(t);
     //Recurse to clean up the remaining arguments
@@ -29,33 +30,41 @@ void sdlcleanup(T *t, Args&&... args){
  * don't want to bother finding out which values failed to load (and thus are null)
  * but rather just want to clean everything up and let cleanup sort it out
  */
+
 template<>
-void sdlcleanup<SDL_Window>(SDL_Window *win){
+void sdlcleanup<SDL_Window>(SDL_Window *&win){
     if (!win){
         return;
     }
     SDL_DestroyWindow(win);
+    win = nullptr;
 }
+
 template<>
-void sdlcleanup<SDL_Renderer>(SDL_Renderer *ren){
+void sdlcleanup<SDL_Renderer>(SDL_Renderer *&ren){
     if (!ren){
         return;
     }
     SDL_DestroyRenderer(ren);
+    ren = nullptr;
 }
+
 template<>
-void sdlcleanup<SDL_Texture>(SDL_Texture *tex){
+void sdlcleanup<SDL_Texture>(SDL_Texture *&tex){
     if (!tex){
         return;
     }
     SDL_DestroyTexture(tex);
+    tex = nullptr;
 }
+
 template<>
-void sdlcleanup<SDL_Surface>(SDL_Surface *surf){
+void sdlcleanup<SDL_Surface>(SDL_Surface *&surf){
     if (!surf){
         return;
     }
     SDL_FreeSurface(surf);
+    surf = nullptr;
 }
 
 #endif
