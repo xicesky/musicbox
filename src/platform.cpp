@@ -43,20 +43,45 @@ SDLException sdl_error(const std::string &fname) {
 }
 
 /***************************************************************************************************
-    SDL Audio shit
+    Audio buffer
 ***************************************************************************************************/
 
-// Have to declare callback ahead ...
-void platform_audiocallback(void*  userdata, Uint8* stream, int len);
+AudioBuffer::AudioBuffer() 
+    : AudioBuffer(nullptr, 0)
+{
+}
+
+AudioBuffer::AudioBuffer(SAMPLE *xraw, int xlength)
+{
+    raw = xraw;
+    length = xlength;
+}
+
+AudioBuffer::~AudioBuffer() {
+}
 
 void AudioBuffer::clear() {
     memset(raw, 0, length * sizeof(SAMPLE));
 }
 
+/***************************************************************************************************
+    Audio renderer
+***************************************************************************************************/
+
+AudioRenderer::AudioRenderer() {}
+AudioRenderer::~AudioRenderer() {}
+
 // Default impl
 void AudioRenderer::render(AudioBuffer& buf) {
     buf.clear();
 }
+
+/***************************************************************************************************
+    SDL Audio IO
+***************************************************************************************************/
+
+// Have to declare callback ahead ...
+void platform_audiocallback(void*  userdata, Uint8* stream, int len);
 
 class SDLAudioIO {
 
@@ -124,6 +149,43 @@ void platform_audiocallback(void*  userdata, Uint8* stream, int len)
         return;
     SDLAudioIO* p = (SDLAudioIO*)userdata;
     p->audio_callback(stream, len);
+}
+
+/***************************************************************************************************
+    Video buffer
+***************************************************************************************************/
+
+VideoBuffer::VideoBuffer()
+    : VideoBuffer(nullptr, 0, 0)
+{
+}
+
+VideoBuffer::VideoBuffer(PIXEL *xraw, int xwidth, int xheight)
+{
+    raw = xraw;
+    width = xwidth;
+    height = xheight;
+    length = width * height;
+}
+
+VideoBuffer::~VideoBuffer()
+{
+}
+
+void VideoBuffer::clear() {
+    memset(raw, 0, length * sizeof(PIXEL));
+}
+
+/***************************************************************************************************
+    Video renderer
+***************************************************************************************************/
+
+VideoRenderer::VideoRenderer() {}
+VideoRenderer::~VideoRenderer() {}
+
+// Default impl
+void VideoRenderer::render(VideoBuffer& buf) {
+    buf.clear();
 }
 
 /***************************************************************************************************

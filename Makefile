@@ -42,11 +42,11 @@ INCLUDEFLAGS=-I./include
 
 CFLAGS=-std=c99 -Wall $(INCLUDEFLAGS)
 CFLAGS_DBG=-g
-CFLAGS_RLS=-static-libgcc -Os
+CFLAGS_RLS=-static-libgcc -Os -s
 
 CPPFLAGS=-g -std=gnu++11 -Wall $(INCLUDEFLAGS)
 CPPFLAGS_DBG=-g
-CPPFLAGS_RLS=-static-libgcc -static-libstdc++ -Os
+CPPFLAGS_RLS=-static-libgcc -static-libstdc++ -Os -s
 
 CXXFLAGS=$(CPPFLAGS)
 CXXFLAGS_DBG=$(CPPFLAGS_DBG)
