@@ -24,22 +24,22 @@ Normaler Commit
 1. Die zu commitenden Dateien werden "gestaged", in anderen Worten:
     es wird ausgewählt, was genau commited werden soll.
 
-    git status          # Nachschauen was gerade los ist
-    git add -A          # Ich möchte alles commiten
-    git add ...         # Ich möchte eine bestimmte Datei/Unterverz. commiten
-    git reset HEAD ...  # Ich möchte eine bestimmte Datei/Unterverz. doch nicht commiten
-    git status          # Nochmal nachschauen (grün = wird commited)
+        git status          # Nachschauen was gerade los ist
+        git add -A          # Ich möchte alles commiten
+        git add ...         # Ich möchte eine bestimmte Datei/Unterverz. commiten
+        git reset HEAD ...  # Ich möchte eine bestimmte Datei/Unterverz. doch nicht commiten
+        git status          # Nochmal nachschauen (grün = wird commited)
 
 2. Commit durchführen
 
-    git commit -m "My message"      # Jetzt tatsächlich ausführen (mit Message)
-    # - oder -
-    git commit                      # Jetzt tatsächlich ausführen (Message kann in VIM editiert werden)
+        git commit -m "My message"      # Jetzt tatsächlich ausführen (mit Message)
+        # - oder -
+        git commit                      # Jetzt tatsächlich ausführen (Message kann in VIM editiert werden)
 
 3. Mit dem zentralen Repo synchronisieren
 
-    git pull                        # Hole neueste Änderungen vom Server
-    git push                        # Schiebe meine neuesten Änderungen (commits) hoch
+        git pull                        # Hole neueste Änderungen vom Server
+        git push                        # Schiebe meine neuesten Änderungen (commits) hoch
 
 Anderes Zeug (TODO)
 -------------------
