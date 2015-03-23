@@ -34,6 +34,32 @@ OBJFILES_RLS := $(patsubst %,$(OBJDIR)/rls/%.o,$(OBJS))
 
 LIBFLAGS := $(addprefix -l,$(LIBS))
 
+# GCC/G++ detection
+$(info $$CC  is [$(CC)])
+$(info $$CPP is [$(CPP)])
+$(info $$CXX is [$(CXX)])
+
+ifeq ($(CC),)
+	# TODO: Check for mingw w64
+endif
+
+ifeq ($(CXX),)
+	# TODO: Check for mingw w64
+endif
+
+ifeq ($(TARGET),)
+	TARGET := $(shell $(CXX) -v 2>&1 | grep "^Target" | cut -d" " -f2)
+endif
+
+REAL_LIBDIR := $(LIBDIR)
+ifneq ($(TARGET),)
+	REAL_LIBDIR := $(REAL_LIBDIR)/$(TARGET)
+else
+endif
+
+$(info $$TARGET is [$(TARGET)])
+$(info $$REAL_LIBDIR is [$(REAL_LIBDIR)])
+
 # Machine dep. options
 GCC_MACHINEFLAGS=
 
@@ -52,7 +78,7 @@ CXXFLAGS=$(CPPFLAGS)
 CXXFLAGS_DBG=$(CPPFLAGS_DBG)
 CXXFLAGS_RLS=$(CPPFLAGS_RLS)
 
-LDFLAGS=-L./lib
+LDFLAGS=-L./$(REAL_LIBDIR)
 ASFLAGS=
 
 #######################################################
@@ -71,10 +97,10 @@ $(OBJDIR) $(OBJDIR)/dbg $(OBJDIR)/rls:
 	mkdir -p $@
 
 $(OBJDIR)/dbg/%.o: src/%.cpp | $(OBJDIR)/dbg
-	g++ $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_DBG) -c -o $@ $<
+	$(CXX) $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_DBG) -c -o $@ $<
 
 $(OBJDIR)/rls/%.o: src/%.cpp | $(OBJDIR)/rls
-	g++ $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_RLS) -c -o $@ $<
+	$(CXX) $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_RLS) -c -o $@ $<
 
 test:
 	@echo CFLAGS=\"$(CFLAGS)\"
@@ -85,16 +111,16 @@ test:
 #obj/main.o: src/main.c src/song.c
 #		gcc $(GCC_MACHINEFLAGS) $(CFLAGS) -c -o $@ $<
 
-$(BINDIR)/SDL2$(SO_SUFFIX): $(LIBDIR)/SDL2$(SO_SUFFIX)
+$(BINDIR)/SDL2$(SO_SUFFIX): $(REAL_LIBDIR)/SDL2$(SO_SUFFIX)
 	cp $< $@
 
 $(BINDIR)/$(EXECNAME_DBG): $(OBJFILES_DBG) | $(BINDIR)/SDL2$(SO_SUFFIX)
 #	echo LINKING: $^
-	g++ $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_DBG) $(LDFLAGS) -o $@ $^ $(LIBFLAGS)
+	$(CXX) $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_DBG) $(LDFLAGS) -o $@ $^ $(LIBFLAGS)
 
 $(BINDIR)/$(EXECNAME_RLS): $(OBJFILES_RLS) | $(BINDIR)/SDL2$(SO_SUFFIX)
 #	echo LINKING: $^
-	g++ $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_RLS) $(LDFLAGS) -o $@ $^ $(LIBFLAGS)
+	$(CXX) $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_RLS) $(LDFLAGS) -o $@ $^ $(LIBFLAGS)
 
 runmain: $(BINDIR)/main_dbg
 	./$(BINDIR)/main_dbg
