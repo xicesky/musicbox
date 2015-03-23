@@ -17,8 +17,12 @@ Required packages:
   - mingw64-x86_64-gcc-g++
 
 Setup for mingw-w64:
-    ln -s /usr/bin/x86_64-w64-mingw32-gcc.exe /usr/x86_64-w64-mingw32/bin/gcc.exe
-    ln -s /usr/bin/x86_64-w64-mingw32-g++.exe /usr/x86_64-w64-mingw32/bin/g++.exe
+```
+ln -s /usr/bin/x86_64-w64-mingw32-gcc.exe /usr/x86_64-w64-mingw32/bin/gcc.exe
+ln -s /usr/bin/x86_64-w64-mingw32-g++.exe /usr/x86_64-w64-mingw32/bin/g++.exe
+```
 
 Environment for running the debug version:    
-    export PATH=$PATH:/usr/x86_64-w64-mingw32/sys-root/mingw/bin
+```
+export PATH=$PATH:/usr/x86_64-w64-mingw32/sys-root/mingw/bin
+```
