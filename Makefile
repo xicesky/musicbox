@@ -15,8 +15,8 @@ EXECNAME := main
 DEBUG_SUFFIX := _dbg
 
 # TARGET: Mingw 64 or 32 bit?
-TARGET := i686-w64-mingw32
-TARGET := x86_64-w64-mingw32
+#TARGET := i686-w64-mingw32
+#TARGET := x86_64-w64-mingw32
 
 #######################################################
 # Don't change this
@@ -77,30 +77,34 @@ ifeq (cygwin,$(MY_OS))
     endif
 endif
 
+# Select compiler etc based on target
+ifeq ($(TARGET),)
+    ifeq ($(CXX),)
+        TARGET := $(shell gcc -dumpmachine)
+    else
+        #TARGET := $(shell $(CXX) -v 2>&1 | grep "^Target" | cut -d" " -f2)
+        TARGET := $(shell $(CXX) -dumpmachine)
+    endif
+else
+    CC=$(TARGET)-gcc
+    CXX=$(TARGET)-g++
+endif
+
 ifeq ($(CC),)
+    CC=$(TARGET)-gcc
     # TODO: Check for mingw w64
 endif
 
 ifeq ($(CXX),)
+    CC=$(TARGET)-g++
     # TODO: Check for mingw w64
 endif
-
-ifeq ($(TARGET),)
-    TARGET := $(shell $(CXX) -v 2>&1 | grep "^Target" | cut -d" " -f2)
-endif
-
-$(info $$CC      is [$(CC)])
-$(info $$CPP     is [$(CPP)])
-$(info $$CXX     is [$(CXX)])
 
 REAL_LIBDIR := $(LIBDIR)
 ifneq ($(TARGET),)
     REAL_LIBDIR := $(REAL_LIBDIR)/$(TARGET)
 else
 endif
-
-$(info $$TARGET is [$(TARGET)])
-#$(info $$REAL_LIBDIR is [$(REAL_LIBDIR)])
 
 # Machine dep. options
 GCC_MACHINEFLAGS=
@@ -130,7 +134,7 @@ SEARCH_SO_DIR := $(abspath $(dir $(shell which gcc)))
 # Targets
 ################################################# # # #
 
-.PHONY: default debug release test runmain clean info copydeps
+.PHONY: default debug release runmain clean info copydeps
 
 default: debug
 
@@ -147,14 +151,31 @@ $(OBJDIR)/dbg/%.o: src/%.cpp | $(OBJDIR)/dbg
 $(OBJDIR)/rls/%.o: src/%.cpp | $(OBJDIR)/rls
 		$(CXX) $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_RLS) -c -o $@ $<
 
-test:
-		@echo CFLAGS=\"$(CFLAGS)\"
-		@echo CFLAGS_DBG=\"$(CFLAGS_DBG)\"
-		@echo CPPFLAGS=\"$(CPPFLAGS)\"
-		@echo CPPFLAGS_DBG=\"$(CPPFLAGS_DBG)\"
-
 info:
-	@echo "SEARCH_SO_DIR   = $(SEARCH_SO_DIR)"
+		@echo "--------------------------------------------------------------------------------"
+		@echo "Compiler"
+		@echo "    TARGET          : $(TARGET)"
+		@echo "    CC              : $(CC)"
+		@echo "    CPP             : $(CPP)"
+		@echo "    CXX             : $(CXX)"
+		@echo "--------------------------------------------------------------------------------"
+		@echo "Flags"
+		@echo "    CFLAGS          : $(CFLAGS)"
+		@echo "    CFLAGS_DBG      : $(CFLAGS_DBG)"
+		@echo "    CPPFLAGS        : $(CPPFLAGS)"
+		@echo "    CPPFLAGS_DBG    : $(CPPFLAGS_DBG)"
+		@echo "--------------------------------------------------------------------------------"
+		@echo "Directories"
+		@echo "    REAL_LIBDIR     : $(REAL_LIBDIR)"
+		@echo "    SEARCH_SO_DIR   : $(SEARCH_SO_DIR)"
+		@echo "--------------------------------------------------------------------------------"
+		@echo "Problems"
+		@[ -x "$(CC)" ] || \
+		 echo "    C Compiler not found    : $(CC)"
+		@[ -x "$(CXX)" ] || \
+		 echo "    C++ Compiler not found  : $(CXX)"
+		@[ -d "$(REAL_LIBDIR)" ] || \
+		 echo "    Missing bundled libs    : $(REAL_LIBDIR)"
 
 #obj/main.o: src/main.c src/song.c
 #        gcc $(GCC_MACHINEFLAGS) $(CFLAGS) -c -o $@ $<
@@ -171,7 +192,7 @@ $(BINDIR)/$(EXECNAME_RLS): $(OBJFILES_RLS) | $(BINDIR)/SDL2$(SO_SUFFIX)
 # Copy shared libraries into bin dir, e.g. for MinGW
 # XXX: How can we find which libs are required?
 $(BINDIR)/%$(SO_SUFFIX): $(SEARCH_SO_DIR)/%$(SO_SUFFIX)
-	cp $< $@
+		cp $< $@
 
 copydeps: $(BINDIR)/libgcc_s_dw2-1$(SO_SUFFIX) $(BINDIR)/libstdc++-6$(SO_SUFFIX)
 
