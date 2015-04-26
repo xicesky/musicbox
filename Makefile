@@ -55,28 +55,6 @@ else
 endif
 $(info Detected OS: $(MY_OS))
 
-# Find CC, CPP, CXX if not yet specified
-ifeq (cygwin,$(MY_OS))
-    ifeq (,$(shell which "$(CC)" 2>/dev/null))
-        ifneq (,$(wildcard /usr/bin/x86_64-w64-mingw32-gcc))
-            CC := $(wildcard /usr/bin/x86_64-w64-mingw32-gcc)
-            $(info Found mingw-w64 gcc: $(CC))
-        endif
-    endif
-    # ifeq (,$(shell which "$(CPP)" 2>/dev/null))
-    #     ifneq (,$(wildcard /usr/bin/x86_64-w64-mingw32-cpp))
-    #         GCC := $(wildcard /usr/bin/x86_64-w64-mingw32-cpp)
-    #         $(info Found mingw-w64 cpp: $(CPP))
-    #     endif
-    # endif
-    ifeq (,$(shell which "$(CXX)" 2>/dev/null))
-        ifneq (,$(wildcard /usr/bin/x86_64-w64-mingw32-g++))
-            CXX := $(wildcard /usr/bin/x86_64-w64-mingw32-g++)
-            $(info Found mingw-w64 g++: $(CXX))
-        endif
-    endif
-endif
-
 # Select compiler etc based on target
 ifeq ($(TARGET),)
     ifeq ($(CXX),)
@@ -86,19 +64,21 @@ ifeq ($(TARGET),)
         TARGET := $(shell $(CXX) -dumpmachine)
     endif
 else
-    CC=$(TARGET)-gcc
-    CXX=$(TARGET)-g++
+    CC:=$(TARGET)-gcc
+    CXX:=$(TARGET)-g++
 endif
 
 ifeq ($(CC),)
-    CC=$(TARGET)-gcc
+    CC:=$(TARGET)-gcc
     # TODO: Check for mingw w64
 endif
+CC:=$(shell which $(CC))
 
 ifeq ($(CXX),)
-    CC=$(TARGET)-g++
+    CXX:=$(TARGET)-g++
     # TODO: Check for mingw w64
 endif
+CXX:=$(shell which $(CXX))
 
 REAL_LIBDIR := $(LIBDIR)
 ifneq ($(TARGET),)
