@@ -14,6 +14,10 @@ LIBS := mingw32 SDL2main SDL2
 EXECNAME := main
 DEBUG_SUFFIX := _dbg
 
+# TARGET: Mingw 64 or 32 bit?
+TARGET := i686-w64-mingw32
+TARGET := x86_64-w64-mingw32
+
 #######################################################
 # Don't change this
 ################################################# # # #
@@ -34,6 +38,70 @@ OBJFILES_RLS := $(patsubst %,$(OBJDIR)/rls/%.o,$(OBJS))
 
 LIBFLAGS := $(addprefix -l,$(LIBS))
 
+# OS detection and info
+OSNAME := $(shell uname -s)
+#$(info $$OS      is [$(OS)])
+#$(info $$OSNAME  is [$(OSNAME)])
+
+ifeq ($(OS),Windows_NT)
+    ifneq (,$(findstring CYGWIN,$(OSNAME)))
+        # Detected cygwin
+        MY_OS := cygwin
+    else
+        MY_OS := winnt
+    endif
+else
+    MY_OS := linux
+endif
+$(info Detected OS: $(MY_OS))
+
+# Find CC, CPP, CXX if not yet specified
+ifeq (cygwin,$(MY_OS))
+    ifeq (,$(shell which "$(CC)" 2>/dev/null))
+        ifneq (,$(wildcard /usr/bin/x86_64-w64-mingw32-gcc))
+            CC := $(wildcard /usr/bin/x86_64-w64-mingw32-gcc)
+            $(info Found mingw-w64 gcc: $(CC))
+        endif
+    endif
+    # ifeq (,$(shell which "$(CPP)" 2>/dev/null))
+    #     ifneq (,$(wildcard /usr/bin/x86_64-w64-mingw32-cpp))
+    #         GCC := $(wildcard /usr/bin/x86_64-w64-mingw32-cpp)
+    #         $(info Found mingw-w64 cpp: $(CPP))
+    #     endif
+    # endif
+    ifeq (,$(shell which "$(CXX)" 2>/dev/null))
+        ifneq (,$(wildcard /usr/bin/x86_64-w64-mingw32-g++))
+            CXX := $(wildcard /usr/bin/x86_64-w64-mingw32-g++)
+            $(info Found mingw-w64 g++: $(CXX))
+        endif
+    endif
+endif
+
+ifeq ($(CC),)
+    # TODO: Check for mingw w64
+endif
+
+ifeq ($(CXX),)
+    # TODO: Check for mingw w64
+endif
+
+ifeq ($(TARGET),)
+    TARGET := $(shell $(CXX) -v 2>&1 | grep "^Target" | cut -d" " -f2)
+endif
+
+$(info $$CC      is [$(CC)])
+$(info $$CPP     is [$(CPP)])
+$(info $$CXX     is [$(CXX)])
+
+REAL_LIBDIR := $(LIBDIR)
+ifneq ($(TARGET),)
+    REAL_LIBDIR := $(REAL_LIBDIR)/$(TARGET)
+else
+endif
+
+$(info $$TARGET is [$(TARGET)])
+#$(info $$REAL_LIBDIR is [$(REAL_LIBDIR)])
+
 # Machine dep. options
 GCC_MACHINEFLAGS=
 
@@ -52,7 +120,7 @@ CXXFLAGS=$(CPPFLAGS)
 CXXFLAGS_DBG=$(CPPFLAGS_DBG)
 CXXFLAGS_RLS=$(CPPFLAGS_RLS)
 
-LDFLAGS=-L./lib
+LDFLAGS=-L./$(REAL_LIBDIR)
 ASFLAGS=
 
 # How would this work on unix?
@@ -71,36 +139,34 @@ debug: $(BINDIR)/$(EXECNAME_DBG)
 release: $(BINDIR)/$(EXECNAME_RLS)
 
 $(OBJDIR) $(OBJDIR)/dbg $(OBJDIR)/rls:
-	mkdir -p $@
+		mkdir -p $@
 
 $(OBJDIR)/dbg/%.o: src/%.cpp | $(OBJDIR)/dbg
-	g++ $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_DBG) -c -o $@ $<
+		$(CXX) $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_DBG) -c -o $@ $<
 
 $(OBJDIR)/rls/%.o: src/%.cpp | $(OBJDIR)/rls
-	g++ $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_RLS) -c -o $@ $<
+		$(CXX) $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_RLS) -c -o $@ $<
 
 test:
-	@echo CFLAGS=\"$(CFLAGS)\"
-	@echo CFLAGS_DBG=\"$(CFLAGS_DBG)\"
-	@echo CPPFLAGS=\"$(CPPFLAGS)\"
-	@echo CPPFLAGS_DBG=\"$(CPPFLAGS_DBG)\"
+		@echo CFLAGS=\"$(CFLAGS)\"
+		@echo CFLAGS_DBG=\"$(CFLAGS_DBG)\"
+		@echo CPPFLAGS=\"$(CPPFLAGS)\"
+		@echo CPPFLAGS_DBG=\"$(CPPFLAGS_DBG)\"
 
 info:
 	@echo "SEARCH_SO_DIR   = $(SEARCH_SO_DIR)"
 
 #obj/main.o: src/main.c src/song.c
-#		gcc $(GCC_MACHINEFLAGS) $(CFLAGS) -c -o $@ $<
+#        gcc $(GCC_MACHINEFLAGS) $(CFLAGS) -c -o $@ $<
 
-$(BINDIR)/SDL2$(SO_SUFFIX): $(LIBDIR)/SDL2$(SO_SUFFIX)
-	cp $< $@
+$(BINDIR)/SDL2$(SO_SUFFIX): $(REAL_LIBDIR)/SDL2$(SO_SUFFIX)
+		cp $< $@
 
 $(BINDIR)/$(EXECNAME_DBG): $(OBJFILES_DBG) | $(BINDIR)/SDL2$(SO_SUFFIX)
-#	echo LINKING: $^
-	g++ $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_DBG) $(LDFLAGS) -o $@ $^ $(LIBFLAGS)
+		$(CXX) $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_DBG) $(LDFLAGS) -o $@ $^ $(LIBFLAGS)
 
 $(BINDIR)/$(EXECNAME_RLS): $(OBJFILES_RLS) | $(BINDIR)/SDL2$(SO_SUFFIX)
-#	echo LINKING: $^
-	g++ $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_RLS) $(LDFLAGS) -o $@ $^ $(LIBFLAGS)
+		$(CXX) $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_RLS) $(LDFLAGS) -o $@ $^ $(LIBFLAGS)
 
 # Copy shared libraries into bin dir, e.g. for MinGW
 # XXX: How can we find which libs are required?
@@ -110,11 +176,11 @@ $(BINDIR)/%$(SO_SUFFIX): $(SEARCH_SO_DIR)/%$(SO_SUFFIX)
 copydeps: $(BINDIR)/libgcc_s_dw2-1$(SO_SUFFIX) $(BINDIR)/libstdc++-6$(SO_SUFFIX)
 
 runmain: $(BINDIR)/main_dbg
-	./$(BINDIR)/main_dbg
+		./$(BINDIR)/main_dbg
 
 clean:
-	-@rm $(OBJFILES_DBG) >/dev/null 2>&1
-	-@rm $(OBJFILES_RLS) >/dev/null 2>&1
-	-@rm $(BINDIR)/SDL2$(SO_SUFFIX) >/dev/null 2>&1
-	-@rm $(BINDIR)/$(EXECNAME_DBG)$(EXECUTABLE_SUFFIX) >/dev/null 2>&1
-	-@rm $(BINDIR)/$(EXECNAME_RLS)$(EXECUTABLE_SUFFIX) >/dev/null 2>&1
+		-@rm $(OBJFILES_DBG) >/dev/null 2>&1
+		-@rm $(OBJFILES_RLS) >/dev/null 2>&1
+		-@rm $(BINDIR)/SDL2$(SO_SUFFIX) >/dev/null 2>&1
+		-@rm $(BINDIR)/$(EXECNAME_DBG)$(EXECUTABLE_SUFFIX) >/dev/null 2>&1
+		-@rm $(BINDIR)/$(EXECNAME_RLS)$(EXECUTABLE_SUFFIX) >/dev/null 2>&1
