@@ -55,11 +55,14 @@ CXXFLAGS_RLS=$(CPPFLAGS_RLS)
 LDFLAGS=-L./lib
 ASFLAGS=
 
+# How would this work on unix?
+SEARCH_SO_DIR := $(abspath $(dir $(shell which gcc)))
+
 #######################################################
 # Targets
 ################################################# # # #
 
-.PHONY: default debug release test runmain clean
+.PHONY: default debug release test runmain clean info copydeps
 
 default: debug
 
@@ -82,6 +85,9 @@ test:
 	@echo CPPFLAGS=\"$(CPPFLAGS)\"
 	@echo CPPFLAGS_DBG=\"$(CPPFLAGS_DBG)\"
 
+info:
+	@echo "SEARCH_SO_DIR   = $(SEARCH_SO_DIR)"
+
 #obj/main.o: src/main.c src/song.c
 #		gcc $(GCC_MACHINEFLAGS) $(CFLAGS) -c -o $@ $<
 
@@ -95,6 +101,13 @@ $(BINDIR)/$(EXECNAME_DBG): $(OBJFILES_DBG) | $(BINDIR)/SDL2$(SO_SUFFIX)
 $(BINDIR)/$(EXECNAME_RLS): $(OBJFILES_RLS) | $(BINDIR)/SDL2$(SO_SUFFIX)
 #	echo LINKING: $^
 	g++ $(GCC_MACHINEFLAGS) $(CPPFLAGS) $(CPPFLAGS_RLS) $(LDFLAGS) -o $@ $^ $(LIBFLAGS)
+
+# Copy shared libraries into bin dir, e.g. for MinGW
+# XXX: How can we find which libs are required?
+$(BINDIR)/%$(SO_SUFFIX): $(SEARCH_SO_DIR)/%$(SO_SUFFIX)
+	cp $< $@
+
+copydeps: $(BINDIR)/libgcc_s_dw2-1$(SO_SUFFIX) $(BINDIR)/libstdc++-6$(SO_SUFFIX)
 
 runmain: $(BINDIR)/main_dbg
 	./$(BINDIR)/main_dbg
